@@ -9,9 +9,11 @@ from django.dispatch import receiver
 
 class Profile(models.Model):
     user = models.OneToOneField(settings.AUTH_USER_MODEL,
-                                on_delete=models.CASCADE)
+                                on_delete=models.CASCADE,
+                                related_name='profile')
     bio = models.TextField(null=True, blank=True)
     profile_image = models.ImageField(upload_to='profile_pics/', null=True, blank=True)
+    
 
     def __str__(self):
         return f'Profile of {self.user.username}'
@@ -33,12 +35,10 @@ class UserManager(BaseUserManager):
         return user
         
 
-    def create_superuser(self, email, password):
-        user = self.create_user(email, password)
-        user.is_staff = True
-        user.is_superuser = True
-        user.save(using=self._db)
-        return user
+    def create_superuser(self, email, password=None, **extra_fields):
+        extra_fields.setdefault('is_staff', True)
+        extra_fields.setdefault('is_active', True)
+        return self.create_user(email, password, **extra_fields)
 
 
 class User(AbstractBaseUser, PermissionsMixin):
@@ -54,13 +54,18 @@ class User(AbstractBaseUser, PermissionsMixin):
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = ['username']
 
+    def __str__(self):
+        return self.username
+
 
 # Create your models here.
 class Post(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL,
-                             on_delete=models.CASCADE)
+                             on_delete=models.CASCADE,
+                             related_name='posts')
     description = models.TextField()
     image = models.ImageField(upload_to='post_images/', null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
     
 
     def __str__(self):
@@ -68,7 +73,8 @@ class Post(models.Model):
 
 class Like(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL,
-                             on_delete=models.CASCADE)
+                             on_delete=models.CASCADE,
+                             related_name='likes')
     post = models.ForeignKey('Post', on_delete=models.CASCADE, related_name='likes')
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -80,9 +86,11 @@ class Like(models.Model):
 
 class Comment(models.Model):
     post = models.ForeignKey('Post',
-                             on_delete=models.CASCADE, related_name='comments')
+                             on_delete=models.CASCADE, 
+                             related_name='comments')
     user = models.ForeignKey(settings.AUTH_USER_MODEL,
-                             on_delete=models.CASCADE)
+                             on_delete=models.CASCADE,
+                             related_name='comments')
     content = models.TextField()
     created_at = models.DateTimeField(auto_now_add=True)
 
